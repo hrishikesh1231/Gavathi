@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 const orderSchema = new mongoose.Schema(
 
   {
+
+    // =====================================
+    // CUSTOMER
+    // =====================================
+
     customerId: {
 
       type:
@@ -13,6 +18,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
 
     },
+
     customer: {
 
       name: String,
@@ -31,13 +37,18 @@ const orderSchema = new mongoose.Schema(
 
     },
 
+    // =====================================
+    // PRODUCTS
+    // =====================================
+
     products: [
 
       {
 
         productId: {
 
-          type: mongoose.Schema.Types.ObjectId,
+          type:
+            mongoose.Schema.Types.ObjectId,
 
           ref: "Product",
 
@@ -55,7 +66,36 @@ const orderSchema = new mongoose.Schema(
 
     ],
 
-    totalPrice: Number,
+    // =====================================
+    // ORIGINAL TOTAL
+    // =====================================
+
+    totalPrice: {
+
+      type: Number,
+
+      default: 0,
+
+    },
+
+    // =====================================
+    // SELLER
+    // =====================================
+
+    seller: {
+
+      type:
+        mongoose.Schema.Types.ObjectId,
+
+      ref: "User",
+
+      required: true,
+
+    },
+
+    // =====================================
+    // ORDER STATUS
+    // =====================================
 
     status: {
 
@@ -69,10 +109,6 @@ const orderSchema = new mongoose.Schema(
 
         "Confirmed",
 
-        "Preparing",
-
-        "Delivered",
-
         "Cancelled",
 
       ],
@@ -81,13 +117,27 @@ const orderSchema = new mongoose.Schema(
 
     },
 
-    seller: {
+    // =====================================
+    // DELIVERY STATUS
+    // =====================================
 
-      type: mongoose.Schema.Types.ObjectId,
+    deliveryStatus: {
 
-      ref: "User",
+      type: String,
 
-      required: true,
+      enum: [
+
+        "Pending",
+
+        "Preparing",
+
+        "Out For Delivery",
+
+        "Delivered",
+
+      ],
+
+      default: "Pending",
 
     },
 
@@ -132,7 +182,7 @@ const orderSchema = new mongoose.Schema(
     },
 
     // =====================================
-    // DELIVERY
+    // DELIVERY INFO
     // =====================================
 
     expectedDeliveryDate: {
@@ -190,6 +240,16 @@ const orderSchema = new mongoose.Schema(
       default: "COD",
 
     },
+
+    // =====================================
+    // TRACKING
+    // =====================================
+
+    deliveredAt: Date,
+
+    confirmedAt: Date,
+
+    sellerRespondedAt: Date,
 
   },
 

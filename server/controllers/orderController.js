@@ -8,25 +8,20 @@ import Order from "../models/Order.js";
 export const createOrder = async (
 
   req,
-
   res
 
 ) => {
 
   try {
-
+//  console.log(req.body);
     const {
 
       customer,
-
       products,
-
       totalPrice,
-
       seller,
 
     } = req.body;
-
 
     // =========================
     // VALIDATION
@@ -35,11 +30,8 @@ export const createOrder = async (
     if (
 
       !customer ||
-
       !products ||
-
       !totalPrice ||
-
       !seller
 
     ) {
@@ -47,13 +39,11 @@ export const createOrder = async (
       return res.status(400).json({
 
         success: false,
-
         message: "All fields are required",
 
       });
 
     }
-
 
     // =========================
     // CREATE ORDER
@@ -74,8 +64,10 @@ export const createOrder = async (
 
       status: "Pending",
 
-    });
+      deliveryStatus:
+        "Pending",
 
+    });
 
     // =========================
     // RESPONSE
@@ -85,7 +77,8 @@ export const createOrder = async (
 
       success: true,
 
-      message: "Order placed successfully",
+      message:
+        "Order placed successfully",
 
       order,
 
@@ -99,9 +92,11 @@ export const createOrder = async (
 
       success: false,
 
-      message: "Order failed",
+      message:
+        "Order failed",
 
-      error: error.message,
+      error:
+        error.message,
 
     });
 
@@ -117,19 +112,14 @@ export const createOrder = async (
 export const getSellerOrders = async (
 
   req,
-
   res
 
 ) => {
 
   try {
 
-    // logged in seller id
-
     const sellerId =
       req.user.id;
-
-    // find seller orders
 
     const orders =
       await Order.find({
@@ -219,13 +209,12 @@ export const getCustomerOrders =
 
 
 // ========================================
-// SELLER RESPONSE TO ORDER
+// SELLER RESPONSE
 // ========================================
 
 export const respondToOrder = async (
 
   req,
-
   res
 
 ) => {
@@ -235,18 +224,11 @@ export const respondToOrder = async (
     const {
 
       sellerResponse,
-
       deliveryCharge,
-
       discount,
-
       finalTotal,
-
       expectedDeliveryDate,
-
       sellerMessage,
-
-      status,
 
     } = req.body;
 
@@ -267,6 +249,26 @@ export const respondToOrder = async (
 
         message:
           "Order not found",
+
+      });
+
+    }
+
+    // =========================
+    // ALREADY RESPONDED
+    // =========================
+
+    if (
+      order.status !==
+      "Pending"
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Response already sent",
 
       });
 
@@ -295,10 +297,13 @@ export const respondToOrder = async (
       sellerMessage;
 
     order.status =
-      status;
+      "Seller Responded";
+
+    order.sellerRespondedAt =
+      new Date();
 
     // =========================
-    // SAVE ORDER
+    // SAVE
     // =========================
 
     await order.save();
@@ -337,6 +342,8 @@ export const respondToOrder = async (
   }
 
 };
+
+
 // ========================================
 // CUSTOMER RESPONSE
 // ========================================
@@ -349,10 +356,7 @@ export const customerResponse =
       const {
 
         customerDecision,
-
         paymentMethod,
-
-        status,
 
       } = req.body;
 
@@ -379,11 +383,45 @@ export const customerResponse =
       }
 
       // =========================
-      // UPDATE ORDER
+      // CUSTOMER CONFIRMED
       // =========================
 
-      order.customerDecision =
-        customerDecision;
+      if (
+        customerDecision ===
+        "Confirmed"
+      ) {
+
+        order.customerDecision =
+          "Confirmed";
+
+        order.status =
+          "Confirmed";
+
+        order.confirmedAt =
+          new Date();
+
+      }
+
+      // =========================
+      // CUSTOMER CANCELLED
+      // =========================
+
+      if (
+        customerDecision ===
+        "Cancelled"
+      ) {
+
+        order.customerDecision =
+          "Cancelled";
+
+        order.status =
+          "Cancelled";
+
+      }
+
+      // =========================
+      // PAYMENT METHOD
+      // =========================
 
       if (paymentMethod) {
 
@@ -391,9 +429,6 @@ export const customerResponse =
           paymentMethod;
 
       }
-
-      order.status =
-        status;
 
       // =========================
       // SAVE
@@ -422,6 +457,119 @@ export const customerResponse =
 
         message:
           "Failed to update order",
+
+      });
+
+    }
+
+  };
+
+
+// ========================================
+// UPDATE DELIVERY STATUS
+// ========================================
+
+export const updateDeliveryStatus =
+  async (req, res) => {
+
+    try {
+
+      const {
+
+        deliveryStatus,
+
+      } = req.body;
+
+      // =========================
+      // FIND ORDER
+      // =========================
+
+      const order =
+        await Order.findById(
+          req.params.id
+        );
+
+      if (!order) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            "Order not found",
+
+        });
+
+      }
+
+      // =========================
+      // MUST BE CONFIRMED
+      // =========================
+
+      if (
+        order.status !==
+        "Confirmed"
+      ) {
+
+        return res.status(400).json({
+
+          success: false,
+
+          message:
+            "Customer not confirmed yet",
+
+        });
+
+      }
+
+      // =========================
+      // UPDATE STATUS
+      // =========================
+
+      order.deliveryStatus =
+        deliveryStatus;
+
+      // =========================
+      // AUTO COMPLETE
+      // =========================
+
+      if (
+        deliveryStatus ===
+        "Delivered"
+      ) {
+
+        order.deliveredAt =
+          new Date();
+
+      }
+
+      // =========================
+      // SAVE
+      // =========================
+
+      await order.save();
+
+      res.status(200).json({
+
+        success: true,
+
+        message:
+          "Delivery status updated",
+
+        order,
+
+      });
+
+    } catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+
+        success: false,
+
+        message:
+          "Failed to update delivery status",
 
       });
 

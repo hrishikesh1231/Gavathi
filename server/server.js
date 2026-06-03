@@ -7,58 +7,57 @@ dotenv.config({
 });
 
 import express from "express";
-
 import mongoose from "mongoose";
-
 import cors from "cors";
-
 import helmet from "helmet";
-
-import rateLimit
-from "express-rate-limit";
+import rateLimit from "express-rate-limit";
 
 // ROUTES
-import productRoutes
-from "./routes/productRoutes.js";
-
-import authRoutes
-from "./routes/authRoutes.js";
-
-import orderRoutes
-from "./routes/orderRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 
 const app = express();
+
+// ======================================
+// TRUST PROXY (IMPORTANT FOR RENDER)
+// ======================================
+
+app.set("trust proxy", 1);
 
 // ======================================
 // SECURITY
 // ======================================
 
 // HELMET SECURITY
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
 // CORS SECURITY
 app.use(
-
   cors({
-
     origin: [
-
+      // process.env.CLIENT_URL,
       "http://localhost:5173",
-
-      "https://gavathipoint.com",
-
-      "https://www.gavathipoint.com",
-
     ],
-
     credentials: true,
-
   })
-
 );
 
+// ======================================
 // BODY PARSER
+// ======================================
+
 app.use(express.json());
+
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
 
 // ======================================
 // RATE LIMITERS
@@ -67,8 +66,7 @@ app.use(express.json());
 // OTP LIMITER
 const otpLimiter = rateLimit({
 
-  windowMs:
-    15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
 
   max: 5,
 
@@ -86,8 +84,7 @@ const otpLimiter = rateLimit({
 // LOGIN LIMITER
 const loginLimiter = rateLimit({
 
-  windowMs:
-    15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
 
   max: 10,
 
@@ -105,8 +102,7 @@ const loginLimiter = rateLimit({
 // GLOBAL API LIMITER
 const apiLimiter = rateLimit({
 
-  windowMs:
-    15 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
 
   max: 200,
 
@@ -137,31 +133,6 @@ app.use(
 );
 
 // ======================================
-// MONGODB CONNECTION
-// ======================================
-
-mongoose.connect(
-  process.env.MONGO_URI
-)
-
-.then(() => {
-
-  console.log(
-    "MongoDB Connected ✅"
-  );
-
-})
-
-.catch((err) => {
-
-  console.log(
-    "MongoDB Error:",
-    err.message
-  );
-
-});
-
-// ======================================
 // ROOT ROUTE
 // ======================================
 
@@ -170,6 +141,23 @@ app.get("/", (req, res) => {
   res.send(
     "GAVATHI API Running 🚀"
   );
+
+});
+
+// ======================================
+// HEALTH CHECK ROUTE
+// ======================================
+
+app.get("/health", (req, res) => {
+
+  res.status(200).json({
+
+    success: true,
+
+    message:
+      "Server healthy ✅",
+
+  });
 
 });
 
@@ -210,16 +198,43 @@ app.use((req, res) => {
 });
 
 // ======================================
-// SERVER
+// MONGODB CONNECTION
 // ======================================
 
-const PORT =
-  process.env.PORT || 5000;
+mongoose.connect(
+  process.env.MONGO_URI
+)
 
-app.listen(PORT, () => {
+.then(() => {
 
   console.log(
-    `Server running on port ${PORT} 🚀`
+    "MongoDB Connected ✅"
   );
+
+  // ======================================
+  // SERVER START
+  // ======================================
+
+  const PORT =
+    process.env.PORT || 5000;
+
+  app.listen(PORT, () => {
+
+    console.log(
+      `Server running on port ${PORT} 🚀`
+    );
+
+  });
+
+})
+
+.catch((err) => {
+
+  console.log(
+    "MongoDB Error:",
+    err.message
+  );
+
+  process.exit(1);
 
 });

@@ -24,12 +24,12 @@ cloudinary.config({
 
 // DEBUG
 
-console.log(
+// console.log(
 
-  "CLOUDINARY KEY:",
+//   "CLOUDINARY KEY:",
 
-  process.env.CLOUDINARY_API_KEY
+//   process.env.CLOUDINARY_API_KEY
 
-);
+// );
 
 export default cloudinary;

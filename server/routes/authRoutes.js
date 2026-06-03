@@ -4,6 +4,8 @@ import express from "express";
 
 import protect from "../middleware/authMiddleware.js";
 
+import validate from "../middleware/validateMiddleware.js";
+
 import {
 
   signup,
@@ -14,6 +16,15 @@ import {
 
 } from "../controllers/authController.js";
 
+import {
+
+  signupSchema,
+  loginSchema,
+  sendOtpSchema,
+  verifyOtpSchema,
+
+} from "../validations/authValidation.js";
+
 const router = express.Router();
 
 // ======================================
@@ -22,29 +33,52 @@ const router = express.Router();
 
 // SEND OTP
 router.post(
+
   "/send-otp",
+
+  validate(sendOtpSchema),
+
   sendOTP
+
 );
 
 // VERIFY OTP
 router.post(
+
   "/verify-otp",
+
+  validate(verifyOtpSchema),
+
   verifyOTP
+
 );
 
 // SIGNUP
 router.post(
+
   "/signup",
+
+  validate(signupSchema),
+
   signup
+
 );
 
 // LOGIN
 router.post(
+
   "/login",
+
+  validate(loginSchema),
+
   login
+
 );
 
+// ======================================
 // PROTECTED ROUTE
+// ======================================
+
 router.get(
 
   "/me",

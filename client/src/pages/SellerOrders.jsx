@@ -13,11 +13,15 @@ import {
   XCircle,
   Minus,
   Plus,
+  Truck,
+  PackageCheck,
+  CookingPot,
 } from "lucide-react";
 
 const SellerOrders = () => {
 
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] =
+    useState([]);
 
   const [selectedOrder, setSelectedOrder] =
     useState(null);
@@ -31,60 +35,119 @@ const SellerOrders = () => {
   const [discount, setDiscount] =
     useState(0);
 
-    const [expectedDeliveryDate, setExpectedDeliveryDate] =
-  useState("");
+  const [
+    expectedDeliveryDate,
+    setExpectedDeliveryDate,
+  ] = useState("");
 
-const [sellerMessage, setSellerMessage] =
-  useState("");
-  // =========================
+  const [sellerMessage, setSellerMessage] =
+    useState("");
+
+  // =====================================
   // FETCH ORDERS
-  // =========================
+  // =====================================
 
   useEffect(() => {
-
-    const fetchOrders = async () => {
-
-      try {
-
-        const token =
-          localStorage.getItem(
-            "gavathi_token"
-          );
-
-        const { data } =
-          await axios.get(
-
-            `${import.meta.env.VITE_API_URL}/api/orders/seller-orders`,
-
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-
-          );
-
-        if (data.success) {
-
-          setOrders(data.orders);
-
-        }
-
-      } catch (error) {
-
-        console.log(error);
-
-      }
-
-    };
 
     fetchOrders();
 
   }, []);
 
-  // =========================
+  const fetchOrders = async () => {
+
+    try {
+
+      const token =
+        localStorage.getItem(
+          "gavathi_token"
+        );
+
+      const { data } =
+        await axios.get(
+
+          `${import.meta.env.VITE_API_URL}/api/orders/seller-orders`,
+
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+
+        );
+
+      if (data.success) {
+
+        setOrders(data.orders);
+
+      }
+
+    } catch (error) {
+
+      console.log(error);
+
+    }
+
+  };
+
+  // =====================================
+  // OPEN ORDER
+  // =====================================
+
+  const openOrder = (order) => {
+
+    setSelectedOrder(order);
+
+    // already seller responded
+    if (
+      order.status !== "Pending"
+    ) {
+
+      setSellerResponse(
+        order.sellerResponse || {}
+      );
+
+      setDeliveryCharge(
+        order.deliveryCharge || 0
+      );
+
+      setDiscount(
+        order.discount || 0
+      );
+
+      setExpectedDeliveryDate(
+        order.expectedDeliveryDate
+          ?.split("T")[0] || ""
+      );
+
+      setSellerMessage(
+        order.sellerMessage || ""
+      );
+
+      return;
+
+    }
+
+    // fresh order
+    setDeliveryCharge(0);
+
+    setDiscount(0);
+
+    setExpectedDeliveryDate("");
+
+    setSellerMessage("");
+
+    order.products.forEach((item) => {
+
+      initializeProduct(item);
+
+    });
+
+  };
+
+  // =====================================
   // INITIALIZE PRODUCT
-  // =========================
+  // =====================================
 
   const initializeProduct = (item) => {
 
@@ -99,10 +162,17 @@ const [sellerMessage, setSellerMessage] =
         ...prev,
 
         [item.productId]: {
-          availableQty: item.quantity,
+
+          availableQty:
+            item.quantity,
+
           finalPrice:
-            item.quantity * item.price,
-          availability: "Available",
+            item.quantity *
+            item.price,
+
+          availability:
+            "Available",
+
         },
 
       };
@@ -111,29 +181,43 @@ const [sellerMessage, setSellerMessage] =
 
   };
 
-  // =========================
+  // =====================================
+  // ALREADY RESPONDED
+  // =====================================
+
+  const alreadyResponded =
+    selectedOrder?.status !==
+    "Pending";
+
+  // =====================================
   // QTY CHANGE
-  // =========================
+  // =====================================
 
   const handleQtyChange = (
     item,
     qty
   ) => {
 
-    const safeQty = Math.max(
-      0,
-      Number(qty || 0)
-    );
+    if (alreadyResponded)
+      return;
+
+    const safeQty =
+      Math.max(
+        0,
+        Number(qty || 0)
+      );
 
     const availability =
       sellerResponse[item.productId]
-        ?.availability || "Available";
+        ?.availability ||
+      "Available";
 
     const finalPrice =
       availability ===
       "Not Available"
         ? 0
-        : safeQty * Number(item.price);
+        : safeQty *
+          Number(item.price);
 
     setSellerResponse((prev) => ({
 
@@ -143,7 +227,9 @@ const [sellerMessage, setSellerMessage] =
 
         ...prev[item.productId],
 
-        availableQty: safeQty,
+        availableQty:
+          safeQty,
+
         finalPrice,
 
       },
@@ -152,15 +238,21 @@ const [sellerMessage, setSellerMessage] =
 
   };
 
-  // =========================
+  // =====================================
   // INCREMENT
-  // =========================
+  // =====================================
 
-  const incrementQty = (item) => {
+  const incrementQty = (
+    item
+  ) => {
+
+    if (alreadyResponded)
+      return;
 
     const currentQty =
-      sellerResponse[item.productId]
-        ?.availableQty ??
+      sellerResponse[
+        item.productId
+      ]?.availableQty ??
       item.quantity;
 
     handleQtyChange(
@@ -170,18 +262,25 @@ const [sellerMessage, setSellerMessage] =
 
   };
 
-  // =========================
+  // =====================================
   // DECREMENT
-  // =========================
+  // =====================================
 
-  const decrementQty = (item) => {
+  const decrementQty = (
+    item
+  ) => {
+
+    if (alreadyResponded)
+      return;
 
     const currentQty =
-      sellerResponse[item.productId]
-        ?.availableQty ??
+      sellerResponse[
+        item.productId
+      ]?.availableQty ??
       item.quantity;
 
-    if (currentQty <= 0) return;
+    if (currentQty <= 0)
+      return;
 
     handleQtyChange(
       item,
@@ -190,47 +289,39 @@ const [sellerMessage, setSellerMessage] =
 
   };
 
-  // =========================
+  // =====================================
   // STATUS CHANGE
-  // =========================
+  // =====================================
 
   const handleStatusChange = (
     item,
     value
   ) => {
 
+    if (alreadyResponded)
+      return;
+
     const currentQty =
-      sellerResponse[item.productId]
-        ?.availableQty ??
+      sellerResponse[
+        item.productId
+      ]?.availableQty ??
       item.quantity;
 
     let updatedPrice =
-      currentQty * Number(item.price);
+      currentQty *
+      Number(item.price);
 
-    let updatedQty = currentQty;
+    let updatedQty =
+      currentQty;
 
-    // NOT AVAILABLE
     if (
-      value === "Not Available"
+      value ===
+      "Not Available"
     ) {
 
       updatedPrice = 0;
+
       updatedQty = 0;
-
-    }
-
-    // LIMITED STOCK
-    if (
-      value === "Limited Stock" &&
-      currentQty >
-        item.quantity
-    ) {
-
-      updatedQty = item.quantity;
-
-      updatedPrice =
-        updatedQty *
-        Number(item.price);
 
     }
 
@@ -242,9 +333,14 @@ const [sellerMessage, setSellerMessage] =
 
         ...prev[item.productId],
 
-        availability: value,
-        availableQty: updatedQty,
-        finalPrice: updatedPrice,
+        availability:
+          value,
+
+        availableQty:
+          updatedQty,
+
+        finalPrice:
+          updatedPrice,
 
       },
 
@@ -252,115 +348,188 @@ const [sellerMessage, setSellerMessage] =
 
   };
 
-  // =========================
+  // =====================================
   // CALCULATE TOTAL
-  // =========================
+  // =====================================
 
-  const calculateTotal = () => {
+  const calculateTotal =
+    () => {
 
-    let subtotal = 0;
+      let subtotal = 0;
 
-    Object.values(
-      sellerResponse
-    ).forEach((item) => {
+      Object.values(
+        sellerResponse
+      ).forEach((item) => {
 
-      subtotal += Number(
-        item.finalPrice || 0
-      );
-
-    });
-
-    const delivery =
-      Math.max(
-        0,
-        Number(deliveryCharge || 0)
-      );
-
-    const discountValue =
-      Math.max(
-        0,
-        Number(discount || 0)
-      );
-
-    const finalTotal =
-      subtotal +
-      delivery -
-      discountValue;
-
-    return finalTotal > 0
-      ? finalTotal
-      : 0;
-
-  };
-
-  // =========================
-  // SEND RESPONSE
-  // =========================
-
-  const sendResponse = async () => {
-
-    try {
-
-      const token =
-        localStorage.getItem(
-          "gavathi_token"
+        subtotal += Number(
+          item.finalPrice || 0
         );
 
-      await axios.put(
+      });
 
-        `${import.meta.env.VITE_API_URL}/api/orders/respond/${selectedOrder._id}`,
+      const delivery =
+        Math.max(
+          0,
+          Number(
+            deliveryCharge || 0
+          )
+        );
 
-            {
+      const discountValue =
+        Math.max(
+          0,
+          Number(discount || 0)
+        );
+
+      const finalTotal =
+        subtotal +
+        delivery -
+        discountValue;
+
+      return finalTotal > 0
+        ? finalTotal
+        : 0;
+
+    };
+
+  // =====================================
+  // SEND RESPONSE
+  // =====================================
+
+  const sendResponse =
+    async () => {
+
+      try {
+
+        const token =
+          localStorage.getItem(
+            "gavathi_token"
+          );
+
+        await axios.put(
+
+          `${import.meta.env.VITE_API_URL}/api/orders/respond/${selectedOrder._id}`,
+
+          {
+
             sellerResponse,
 
             deliveryCharge:
-                Number(deliveryCharge),
+              Number(
+                deliveryCharge
+              ),
 
             discount:
-                Number(discount),
+              Number(discount),
 
             finalTotal:
-                calculateTotal(),
+              calculateTotal(),
 
             expectedDeliveryDate,
 
             sellerMessage,
 
-            status:
-                "Seller Responded",
-            },
-
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
           },
-        }
 
-      );
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
 
-      toast.success(
-  "Response sent successfully"
-);
-      setSelectedOrder(null);
-      window.location.reload();
+        );
 
-    } catch (error) {
+        toast.success(
+          "Response sent successfully"
+        );
 
-      console.log(error);
+        setSelectedOrder(
+          null
+        );
 
-    }
+        fetchOrders();
 
-  };
+      } catch (error) {
 
-  // =========================
+        console.log(error);
+
+        toast.error(
+          error.response?.data
+            ?.message ||
+            "Something went wrong"
+        );
+
+      }
+
+    };
+
+  // =====================================
+  // DELIVERY STATUS
+  // =====================================
+
+  const updateDeliveryStatus =
+    async (
+      deliveryStatus
+    ) => {
+
+      try {
+
+        const token =
+          localStorage.getItem(
+            "gavathi_token"
+          );
+
+        await axios.put(
+
+          `${import.meta.env.VITE_API_URL}/api/orders/delivery-status/${selectedOrder._id}`,
+
+          {
+            deliveryStatus,
+          },
+
+          {
+            headers: {
+              Authorization:
+                `Bearer ${token}`,
+            },
+          }
+
+        );
+
+        toast.success(
+          "Delivery updated"
+        );
+
+        fetchOrders();
+
+        setSelectedOrder(
+          null
+        );
+
+      } catch (error) {
+
+        console.log(error);
+
+        toast.error(
+          "Failed to update delivery"
+        );
+
+      }
+
+    };
+
+  // =====================================
   // STATUS STYLE
-  // =========================
+  // =====================================
 
   const getStatusStyle = (
     status
   ) => {
 
-    if (status === "Pending") {
+    if (
+      status === "Pending"
+    ) {
 
       return "bg-yellow-400 text-black";
 
@@ -374,13 +543,22 @@ const [sellerMessage, setSellerMessage] =
 
     }
 
-    return "bg-blue-500 text-white";
+    if (
+      status ===
+      "Seller Responded"
+    ) {
+
+      return "bg-blue-500 text-white";
+
+    }
+
+    return "bg-red-500 text-white";
 
   };
 
   return (
 
-    <div className="min-h-screen bg-[#f6fff8] pt-28 px-3 sm:px-4 pb-20 overflow-x-hidden">
+    <div className="min-h-screen bg-[#f6fff8] pt-28 px-3 pb-20">
 
       <div className="max-w-5xl mx-auto">
 
@@ -388,9 +566,9 @@ const [sellerMessage, setSellerMessage] =
 
         <div className="mb-8">
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#14532d]">
+          <h1 className="text-4xl font-extrabold text-[#14532d]">
 
-            Orders
+            Seller Orders
 
           </h1>
 
@@ -401,124 +579,118 @@ const [sellerMessage, setSellerMessage] =
         <div className="space-y-6">
 
           {
-            orders.map((order) => (
+            orders.map(
+              (order) => (
 
-              <div
-                key={order._id}
-                className="bg-white rounded-[28px] shadow-lg overflow-hidden border border-green-100"
-              >
+                <div
 
-                {/* TOP */}
+                  key={order._id}
 
-                <div className="bg-[#14532d] p-5 text-white">
+                  className="bg-white rounded-[28px] shadow-lg overflow-hidden border border-green-100"
 
-                  <div className="flex justify-between items-center gap-3">
+                >
 
-                    <div>
+                  {/* TOP */}
 
-                      <h2 className="text-xl sm:text-2xl font-extrabold">
+                  <div className="bg-[#14532d] p-5 text-white">
+
+                    <div className="flex justify-between items-center">
+
+                      <div>
+
+                        <h2 className="text-2xl font-extrabold">
+
+                          {
+                            order
+                              .customer
+                              ?.name
+                          }
+
+                        </h2>
+
+                        <p className="mt-1 text-green-100">
+
+                          ₹
+                          {
+                            order.finalTotal ||
+                            order.totalPrice
+                          }
+
+                        </p>
+
+                      </div>
+
+                      <div
+
+                        className={`px-4 py-2 rounded-full text-sm font-bold ${getStatusStyle(order.status)}`}
+
+                      >
 
                         {
-                          order.customer
-                            ?.name
+                          order.status
                         }
 
-                      </h2>
+                      </div>
 
-                      <p className="text-green-100 mt-1 text-base sm:text-lg">
+                    </div>
 
-                        ₹
+                  </div>
+
+                  {/* BODY */}
+
+                  <div className="p-5">
+
+                    <div className="flex items-center gap-2 text-gray-600">
+
+                      <MapPin
+                        size={18}
+                        className="text-green-700"
+                      />
+
+                      <p>
+
                         {
-                          order.totalPrice
+                          order
+                            .customer
+                            ?.taluka
+                        }
+
+                        ,
+
+                        {
+                          order
+                            .customer
+                            ?.district
                         }
 
                       </p>
 
                     </div>
 
-                    <div
-                      className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg ${getStatusStyle(order.status)}`}
+                    <button
+
+                      onClick={() =>
+                        openOrder(
+                          order
+                        )
+                      }
+
+                      className="mt-5 bg-[#14532d] hover:bg-[#166534] text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2"
+
                     >
 
-                      {order.status}
+                      <Eye size={18} />
 
-                    </div>
+                      View Details
+
+                    </button>
 
                   </div>
 
                 </div>
 
-                {/* BODY */}
-
-                <div className="p-5">
-
-                  <div className="flex items-center gap-2 text-gray-600">
-
-                    <MapPin
-                      size={18}
-                      className="text-green-700"
-                    />
-
-                    <p className="font-medium text-sm sm:text-base">
-
-                      {
-                        order
-                          .customer
-                          ?.taluka
-                      }
-                      ,
-                      {" "}
-                      {
-                        order
-                          .customer
-                          ?.district
-                      }
-
-                    </p>
-
-                  </div>
-
-                  <button
-
-                    onClick={() => {
-
-                      setSelectedOrder(
-                        order
-                      );
-
-                      setDeliveryCharge(
-                        0
-                      );
-
-                      setDiscount(
-                        0
-                      );
-
-                      order.products.forEach(
-                        (
-                          item
-                        ) =>
-                          initializeProduct(
-                            item
-                          )
-                      );
-
-                    }}
-
-                    className="mt-5 bg-[#14532d] hover:bg-[#166534] text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all duration-300 hover:scale-105"
-                  >
-
-                    <Eye size={18} />
-
-                    View Details
-
-                  </button>
-
-                </div>
-
-              </div>
-
-            ))
+              )
+            )
           }
 
         </div>
@@ -528,15 +700,15 @@ const [sellerMessage, setSellerMessage] =
         {
           selectedOrder && (
 
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex justify-center items-center p-3">
 
-              <div className="bg-white w-full max-w-4xl rounded-[28px] p-4 sm:p-6 max-h-[95vh] overflow-y-auto shadow-2xl">
+              <div className="bg-white w-full max-w-5xl rounded-[28px] p-5 max-h-[95vh] overflow-y-auto">
 
                 {/* HEADER */}
 
-                <div className="flex justify-between items-center gap-3 mb-7">
+                <div className="flex justify-between items-center mb-7">
 
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-[#14532d]">
+                  <h2 className="text-3xl font-extrabold text-[#14532d]">
 
                     Order Details
 
@@ -551,9 +723,10 @@ const [sellerMessage, setSellerMessage] =
                     }
 
                     className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-2xl font-bold"
+
                   >
 
-                    Back
+                    Close
 
                   </button>
 
@@ -561,17 +734,17 @@ const [sellerMessage, setSellerMessage] =
 
                 {/* ADDRESS */}
 
-                <div className="bg-[#f0fdf4] rounded-3xl p-5 mb-7 border border-green-100">
+                <div className="bg-[#f0fdf4] rounded-3xl p-5 border border-green-100 mb-8">
 
-                  <h3 className="font-extrabold text-[#14532d] text-xl sm:text-2xl mb-4">
+                  <h3 className="text-2xl font-extrabold text-[#14532d] mb-4">
 
                     Delivery Address
 
                   </h3>
 
-                  <div className="space-y-2 text-gray-700 text-sm sm:text-base break-words">
+                  <div className="space-y-2 text-gray-700">
 
-                    <p className="font-bold text-lg sm:text-xl text-[#14532d]">
+                    <p className="font-bold text-xl text-[#14532d]">
 
                       {
                         selectedOrder
@@ -582,11 +755,13 @@ const [sellerMessage, setSellerMessage] =
                     </p>
 
                     <p>
+
                       {
                         selectedOrder
                           .customer
                           ?.address
                       }
+
                     </p>
 
                     <p>
@@ -596,8 +771,9 @@ const [sellerMessage, setSellerMessage] =
                           .customer
                           ?.taluka
                       }
+
                       ,
-                      {" "}
+
                       {
                         selectedOrder
                           .customer
@@ -618,7 +794,7 @@ const [sellerMessage, setSellerMessage] =
 
                     </p>
 
-                    <p className="break-all">
+                    <p>
 
                       WhatsApp:
                       {" "}
@@ -640,6 +816,7 @@ const [sellerMessage, setSellerMessage] =
 
                   {
                     selectedOrder.products.map(
+
                       (
                         item,
                         index
@@ -654,17 +831,20 @@ const [sellerMessage, setSellerMessage] =
                         return (
 
                           <div
+
                             key={index}
-                            className="border border-green-100 rounded-3xl p-4 sm:p-5"
+
+                            className="border border-green-100 rounded-3xl p-5"
+
                           >
 
                             {/* TOP */}
 
-                            <div className="flex justify-between items-start gap-3">
+                            <div className="flex justify-between items-start">
 
                               <div>
 
-                                <h2 className="text-xl sm:text-2xl font-extrabold text-[#14532d]">
+                                <h2 className="text-2xl font-extrabold text-[#14532d]">
 
                                   {
                                     item.name
@@ -672,7 +852,7 @@ const [sellerMessage, setSellerMessage] =
 
                                 </h2>
 
-                                <p className="text-gray-500 mt-1 text-sm sm:text-base">
+                                <p className="text-gray-500 mt-1">
 
                                   Requested:
                                   {" "}
@@ -684,7 +864,7 @@ const [sellerMessage, setSellerMessage] =
 
                               </div>
 
-                              <h2 className="text-2xl sm:text-3xl font-extrabold text-green-700 whitespace-nowrap">
+                              <h2 className="text-3xl font-extrabold text-green-700">
 
                                 ₹
                                 {
@@ -695,15 +875,15 @@ const [sellerMessage, setSellerMessage] =
 
                             </div>
 
-                            {/* INPUTS */}
+                            {/* GRID */}
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
 
                               {/* QTY */}
 
-                              <div className="bg-[#f8fffb] border-2 border-green-100 rounded-2xl p-3">
+                              <div className="bg-[#f8fffb] border-2 border-green-100 rounded-2xl p-4">
 
-                                <p className="text-sm font-semibold text-gray-600 mb-3">
+                                <p className="font-semibold text-gray-600 mb-3">
 
                                   Available Qty
 
@@ -713,13 +893,17 @@ const [sellerMessage, setSellerMessage] =
 
                                   <button
 
+                                    disabled={
+                                      alreadyResponded
+                                    }
+
                                     onClick={() =>
                                       decrementQty(
                                         item
                                       )
                                     }
 
-                                    className="w-11 h-11 rounded-full bg-green-100 hover:bg-green-200 flex items-center justify-center transition-all duration-300 active:scale-95"
+                                    className="w-11 h-11 rounded-full bg-green-100 flex items-center justify-center"
 
                                   >
 
@@ -727,17 +911,23 @@ const [sellerMessage, setSellerMessage] =
                                       size={
                                         18
                                       }
-                                      className="text-[#14532d]"
                                     />
 
                                   </button>
 
                                   <input
+
                                     type="number"
+
+                                    disabled={
+                                      alreadyResponded
+                                    }
+
                                     value={
                                       currentData.availableQty ??
                                       item.quantity
                                     }
+
                                     onChange={(
                                       e
                                     ) =>
@@ -748,10 +938,16 @@ const [sellerMessage, setSellerMessage] =
                                           .value
                                       )
                                     }
+
                                     className="w-full text-center text-lg font-bold outline-none bg-transparent"
+
                                   />
 
                                   <button
+
+                                    disabled={
+                                      alreadyResponded
+                                    }
 
                                     onClick={() =>
                                       incrementQty(
@@ -759,7 +955,7 @@ const [sellerMessage, setSellerMessage] =
                                       )
                                     }
 
-                                    className="w-11 h-11 rounded-full bg-green-100 hover:bg-green-200 flex items-center justify-center transition-all duration-300 active:scale-95"
+                                    className="w-11 h-11 rounded-full bg-green-100 flex items-center justify-center"
 
                                   >
 
@@ -767,7 +963,6 @@ const [sellerMessage, setSellerMessage] =
                                       size={
                                         18
                                       }
-                                      className="text-[#14532d]"
                                     />
 
                                   </button>
@@ -778,15 +973,15 @@ const [sellerMessage, setSellerMessage] =
 
                               {/* PRICE */}
 
-                              <div className="bg-[#f8fffb] border-2 border-green-100 rounded-2xl p-4 flex flex-col justify-center">
+                              <div className="bg-[#f8fffb] border-2 border-green-100 rounded-2xl p-4">
 
-                                <p className="text-sm font-semibold text-gray-600 mb-2">
+                                <p className="font-semibold text-gray-600 mb-2">
 
                                   Total Price
 
                                 </p>
 
-                                <h2 className="text-2xl font-extrabold text-green-700">
+                                <h2 className="text-3xl font-extrabold text-green-700">
 
                                   ₹
                                   {
@@ -801,9 +996,13 @@ const [sellerMessage, setSellerMessage] =
 
                               {/* STATUS */}
 
-                              <div className="relative">
+                              <div>
 
                                 <select
+
+                                  disabled={
+                                    alreadyResponded
+                                  }
 
                                   value={
                                     currentData.availability ||
@@ -821,7 +1020,7 @@ const [sellerMessage, setSellerMessage] =
                                     )
                                   }
 
-                                  className="w-full h-full min-h-[95px] bg-[#f8fffb] border-2 border-green-100 rounded-2xl px-4 py-4 font-semibold text-green-900 outline-none focus:border-green-600 appearance-none cursor-pointer"
+                                  className="w-full min-h-[100px] bg-[#f8fffb] border-2 border-green-100 rounded-2xl px-4 py-4 font-semibold outline-none"
 
                                 >
 
@@ -845,12 +1044,6 @@ const [sellerMessage, setSellerMessage] =
 
                                 </select>
 
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-700 pointer-events-none">
-
-                                  ▼
-
-                                </div>
-
                               </div>
 
                             </div>
@@ -867,7 +1060,7 @@ const [sellerMessage, setSellerMessage] =
 
                 {/* BILLING */}
 
-                <div className="bg-[#f0fdf4] rounded-3xl p-5 sm:p-6 mt-8 border border-green-100">
+                <div className="bg-[#f0fdf4] rounded-3xl p-6 mt-8 border border-green-100">
 
                   <h2 className="text-2xl font-extrabold text-[#14532d] mb-5">
 
@@ -879,20 +1072,28 @@ const [sellerMessage, setSellerMessage] =
 
                     {/* DELIVERY */}
 
-                    <div className="flex justify-between items-center gap-4">
+                    <div className="flex justify-between items-center">
 
-                      <p className="font-semibold text-gray-700 text-sm sm:text-base">
+                      <p className="font-semibold text-gray-700">
 
                         Delivery Charge
 
                       </p>
 
                       <input
+
+                        disabled={
+                          alreadyResponded
+                        }
+
                         type="number"
+
                         min="0"
+
                         value={
                           deliveryCharge
                         }
+
                         onChange={(e) =>
                           setDeliveryCharge(
                             Math.max(
@@ -905,25 +1106,37 @@ const [sellerMessage, setSellerMessage] =
                             )
                           )
                         }
-                        className="border-2 border-green-100 rounded-2xl p-3 w-28 sm:w-40 outline-none focus:border-green-600"
+
+                        className="border-2 border-green-100 rounded-2xl p-3 w-40 outline-none"
+
                       />
 
                     </div>
 
                     {/* DISCOUNT */}
 
-                    <div className="flex justify-between items-center gap-4">
+                    <div className="flex justify-between items-center">
 
-                      <p className="font-semibold text-gray-700 text-sm sm:text-base">
+                      <p className="font-semibold text-gray-700">
 
                         Discount
 
                       </p>
 
                       <input
+
+                        disabled={
+                          alreadyResponded
+                        }
+
                         type="number"
+
                         min="0"
-                        value={discount}
+
+                        value={
+                          discount
+                        }
+
                         onChange={(e) =>
                           setDiscount(
                             Math.max(
@@ -936,75 +1149,100 @@ const [sellerMessage, setSellerMessage] =
                             )
                           )
                         }
-                        className="border-2 border-green-100 rounded-2xl p-3 w-28 sm:w-40 outline-none focus:border-green-600"
+
+                        className="border-2 border-green-100 rounded-2xl p-3 w-40 outline-none"
+
                       />
 
                     </div>
-                    {/* EXPECTED DELIVERY DATE */}
 
-                    <div className="flex justify-between items-center gap-4">
+                    {/* DATE */}
 
-                    <p className="font-semibold text-gray-700 text-sm sm:text-base">
+                    <div className="flex justify-between items-center">
+
+                      <p className="font-semibold text-gray-700">
 
                         Expected Delivery
 
-                    </p>
+                      </p>
 
-                    <input
+                      <input
+
+                        disabled={
+                          alreadyResponded
+                        }
+
                         type="date"
+
                         min={
-                        new Date()
+                          new Date()
                             .toISOString()
                             .split("T")[0]
                         }
+
                         value={
-                        expectedDeliveryDate
+                          expectedDeliveryDate
                         }
+
                         onChange={(e) =>
-                        setExpectedDeliveryDate(
+                          setExpectedDeliveryDate(
                             e.target.value
-                        )
+                          )
                         }
-                        className="border-2 border-green-100 rounded-2xl p-3 w-40 sm:w-52 outline-none focus:border-green-600"
-                    />
+
+                        className="border-2 border-green-100 rounded-2xl p-3 outline-none"
+
+                      />
 
                     </div>
 
-                    {/* SELLER MESSAGE */}
+                    {/* MESSAGE */}
 
-                    <div className="flex flex-col gap-2">
+                    <div>
 
-                    <p className="font-semibold text-gray-700 text-sm sm:text-base">
+                      <p className="font-semibold text-gray-700 mb-2">
 
                         Seller Message
 
-                    </p>
+                      </p>
 
-                    <textarea
-                        rows="3"
-                        placeholder="Write delivery or stock note..."
-                        value={sellerMessage}
-                        onChange={(e) =>
-                        setSellerMessage(
-                            e.target.value
-                        )
+                      <textarea
+
+                        disabled={
+                          alreadyResponded
                         }
-                        className="border-2 border-green-100 rounded-2xl p-4 outline-none focus:border-green-600 resize-none"
-                    />
+
+                        rows="3"
+
+                        placeholder="Write note..."
+
+                        value={
+                          sellerMessage
+                        }
+
+                        onChange={(e) =>
+                          setSellerMessage(
+                            e.target.value
+                          )
+                        }
+
+                        className="w-full border-2 border-green-100 rounded-2xl p-4 outline-none resize-none"
+
+                      />
 
                     </div>
 
                     {/* TOTAL */}
 
-                    <div className="bg-white rounded-2xl p-5 mt-5 flex justify-between items-center shadow-sm">
+                    <div className="bg-white rounded-2xl p-5 flex justify-between items-center">
 
-                      <h2 className="text-xl sm:text-2xl font-extrabold text-[#14532d]">
+                      <h2 className="text-2xl font-extrabold text-[#14532d]">
 
                         Final Total
 
                       </h2>
 
-                      <h2 className="text-3xl sm:text-4xl font-extrabold text-green-700">
+                      <h2 className="text-4xl font-extrabold text-green-700">
 
                         ₹
                         {
@@ -1019,22 +1257,166 @@ const [sellerMessage, setSellerMessage] =
 
                 </div>
 
+                {/* FINALIZED SECTION */}
+
+                {
+                  alreadyResponded && (
+
+                    <div className="bg-white border border-green-100 rounded-3xl p-5 mt-8">
+
+                      <h2 className="text-2xl font-extrabold text-[#14532d] mb-5">
+
+                        Finalized Order Summary
+
+                      </h2>
+
+                      <div className="space-y-3 text-gray-700">
+
+                        <div className="flex justify-between">
+
+                          <p>Customer Decision</p>
+
+                          <p className="font-bold">
+
+                            {
+                              selectedOrder.customerDecision
+                            }
+
+                          </p>
+
+                        </div>
+
+                        <div className="flex justify-between">
+
+                          <p>Delivery Status</p>
+
+                          <p className="font-bold">
+
+                            {
+                              selectedOrder.deliveryStatus
+                            }
+
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  )
+                }
+
+                {/* DELIVERY ACTIONS */}
+
+                {
+                  selectedOrder?.status ===
+                  "Confirmed" && (
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+
+                      <button
+
+                        onClick={() =>
+                          updateDeliveryStatus(
+                            "Preparing"
+                          )
+                        }
+
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+
+                      >
+
+                        <CookingPot
+                          size={20}
+                        />
+
+                        Preparing
+
+                      </button>
+
+                      <button
+
+                        onClick={() =>
+                          updateDeliveryStatus(
+                            "Out For Delivery"
+                          )
+                        }
+
+                        className="bg-blue-500 hover:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+
+                      >
+
+                        <Truck
+                          size={20}
+                        />
+
+                        Out For Delivery
+
+                      </button>
+
+                      <button
+
+                        onClick={() =>
+                          updateDeliveryStatus(
+                            "Delivered"
+                          )
+                        }
+
+                        className="bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+
+                      >
+
+                        <PackageCheck
+                          size={20}
+                        />
+
+                        Delivered
+
+                      </button>
+
+                    </div>
+
+                  )
+                }
+
                 {/* BUTTONS */}
 
                 <div className="flex flex-col sm:flex-row gap-4 mt-8">
 
                   <button
 
+                    disabled={
+                      alreadyResponded
+                    }
+
                     onClick={
                       sendResponse
                     }
 
-                    className="flex-1 bg-[#14532d] hover:bg-[#166534] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02]"
+                    className={`flex-1 py-4 rounded-2xl font-bold flex items-center justify-center gap-2
+
+                    ${
+                      alreadyResponded
+
+                      ? "bg-gray-400 cursor-not-allowed text-white"
+
+                      : "bg-[#14532d] hover:bg-[#166534] text-white"
+                    }`}
+
                   >
 
-                    <CheckCircle size={20} />
+                    <CheckCircle
+                      size={20}
+                    />
 
-                    Send Response
+                    {
+                      alreadyResponded
+
+                      ? "Response Already Sent"
+
+                      : "Send Response"
+                    }
 
                   </button>
 
@@ -1046,12 +1428,15 @@ const [sellerMessage, setSellerMessage] =
                       )
                     }
 
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:scale-[1.02]"
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2"
+
                   >
 
-                    <XCircle size={20} />
+                    <XCircle
+                      size={20}
+                    />
 
-                    Cancel
+                    Close
 
                   </button>
 
